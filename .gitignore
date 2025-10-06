@@ -4,9 +4,7 @@ videos/
 
 # Ignora o ficheiro de sessão do Telethon 
 *.session 
- 
-# **MUITO IMPORTANTE:** Ignora o ficheiro de configuração com as credenciais!
-config.py 
 
 # Ignora ficheiros de cache do Python
+
 __pycache__/
