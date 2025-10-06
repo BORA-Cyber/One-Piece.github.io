@@ -1,0 +1,55 @@
+# .github/workflows/update_site.yml
+name: Atualizar Links do Telegram
+
+# Define o gatilho: 
+# 1. 'workflow_dispatch': Permite executar manualmente
+# 2. 'schedule': Executa a cada hora (explicado abaixo)
+on:
+  workflow_dispatch:
+  schedule:
+    # A sintaxe 'cron' define a frequência. 
+    # Neste caso, executa 'às 00 minutos de cada hora' (a cada hora).
+    - cron: '0 * * * *' 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Usa uma máquina virtual Linux
+    steps:
+    
+      # Passo 1: Checkout do Código
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+        
+      # Passo 2: Configuração do Python
+      - name: Configurar Python 3.x
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      # Passo 3: Instalação de Dependências
+      - name: Instalar Telethon
+        run: pip install -r requirements.txt
+        
+      # Passo 4: Criação do Ficheiro de Configuração SECRETO
+      # ESTE É O PASSO CRÍTICO. 
+      # Usamos Variáveis Secretas (Secrets) para criar o config.py em tempo de execução.
+      - name: Criar config.py com Secrets
+        run: |
+          echo "API_ID = ${{ secrets.API_ID }}" > config.py
+          echo "API_HASH = '${{ secrets.API_HASH }}'" >> config.py
+          echo "GRUPO_USERNAME = '${{ secrets.GRUPO_USERNAME }}'" >> config.py
+          echo "HTML_FILE = 'index.html'" >> config.py
+          
+      # Passo 5: Execução do Script
+      - name: Executar bot_videos.py
+        run: python bot_videos.py
+        
+      # Passo 6: Envio do Novo HTML (O Site Atualizado)
+      # Este passo faz o commit e push do novo ficheiro 'index.html' para o seu repositório
+      - name: Commit e Push do HTML Atualizado
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: 'GitHub Actions'
+          author_email: 'action@github.com'
+          message: 'Atualização automática do site via GitHub Actions'
+          add: 'index.html' # Adiciona apenas o ficheiro HTML
