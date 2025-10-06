@@ -1,25 +1,15 @@
-# bot_videos.py (Versão Otimizada)
+# bot_videos.py (Versão Otimizada para Streaming e Bot Token)
 
 import os
 import asyncio
-from telethon import TelegramClient, events
+from telethon import TelegramClient
+# NOVO: Adicionamos BOT_TOKEN, que será injetado pelo GitHub Actions
+from config import API_ID, API_HASH, GRUPO_USERNAME, HTML_FILE, BOT_TOKEN 
 from telethon.tl.types import MessageMediaDocument
-from config import API_ID, API_HASH, GRUPO_USERNAME, HTML_FILE
 
 # --- Configurações ---
-# A pasta VIDEO_FOLDER não é mais necessária, mas vamos mantê-la para não quebrar a config
-# No entanto, o código de download será removido.
 VIDEO_FOLDER = 'videos' 
-# Limite de mensagens a buscar
-MESSAGE_LIMIT = 50 
-
-# Para armazenar os dados dos vídeos (título e link)
-# Estrutura: [{'title': 'Nome do Video 1', 'link': 'http://link_telegram_temp_1.mp4'}, ...]
-VIDEO_DATA = [] 
-
-# A função generate_html será adaptada para receber esta nova estrutura
-
-# --- CÓDIGO DA FUNÇÃO generate_html (Será colocado na secção 2) --- 
+MESSAGE_LIMIT = 10000 
 
 def generate_html(video_data):
     """
@@ -27,7 +17,6 @@ def generate_html(video_data):
     video_data é uma lista de dicionários com 'title' e 'link' (URL temporária).
     """
     
-    # Início do HTML (sem alterações nos estilos)
     html_content = f"""
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -108,10 +97,7 @@ def generate_html(video_data):
 
 """
     # Geração dos elementos de vídeo
-    # Ordenamos pela ordem inversa da busca (os mais recentes primeiro)
     for video in video_data: 
-        
-        # O título já está limpo na lista de dados.
         title = video['title']
         video_url = video['link'] 
 
@@ -127,7 +113,7 @@ def generate_html(video_data):
 """
     # Fim do HTML
     html_content += """
-    </div> <p style="text-align: center; margin-top: 40px; color: #777;">Site atualizado automaticamente pelo Boss B.</p>
+    </div> <p style="text-align: center; margin-top: 40px; color: #777;">Site atualizado automaticamente pelo Bot.</p>
 </body>
 </html>
 """
@@ -136,20 +122,20 @@ def generate_html(video_data):
 
 
 async def main():
-    # A pasta de vídeos não é mais estritamente necessária, mas mantemos o código de criação
-    # caso você decida usá-la para outra coisa no futuro.
     if not os.path.exists(VIDEO_FOLDER):
         os.makedirs(VIDEO_FOLDER)
 
     # Conexão com o Telegram
+    # Usa API_ID e API_HASH (placeholders) e o Bot Token (real)
     client = TelegramClient('bot_session', API_ID, API_HASH)
     
-    # Inicia a conexão
-    await client.start()
-    print("Conexão com o Telegram iniciada.")
+    # Inicia a conexão, usando o token do bot, que é não interativo!
+    await client.start(bot_token=BOT_TOKEN) 
+    print("Conexão com o Bot Telegram iniciada.")
 
     # Tenta encontrar a entidade do grupo
     try:
+        # ATENÇÃO: O bot PRECISA estar no grupo ou canal (como admin ou membro)
         entity = await client.get_entity(GRUPO_USERNAME)
     except Exception as e:
         print(f"Erro ao encontrar a entidade do grupo '{GRUPO_USERNAME}': {e}")
@@ -158,31 +144,25 @@ async def main():
 
     print(f"Buscando {MESSAGE_LIMIT} mensagens no grupo/canal...")
     
-    # Lista para armazenar os dados dos vídeos encontrados
     videos_to_display = []
 
     # Itera sobre as últimas mensagens
     async for message in client.iter_messages(entity, limit=MESSAGE_LIMIT):
-        # Verifica se a mensagem tem um vídeo
         if message.video:
             
-            # --- LÓGICA DE OBTENÇÃO DO TÍTULO (Mantida) ---
+            # LÓGICA DE OBTENÇÃO DO TÍTULO
             caption = message.text or message.media.caption
             
             if caption:
-                # Remove caracteres inválidos, substitui espaços por '_' e limita o tamanho
                 safe_title = "".join(c for c in caption if c.isalnum() or c in (' ', '_')).rstrip().replace(' ', '_')
-                # Remove o ID que você usava para o nome do arquivo. O ID não é mais necessário no título.
                 title = safe_title[:50] 
             else:
                 title = f"Vídeo ID {message.id}"
                 
-            # Formata o título para exibição (substitui underscores por espaços)
             display_title = title.replace('_', ' ')
 
-            # --- NOVO: GERAÇÃO DO LINK TEMPORÁRIO ---
-            # O get_download_url gera o link temporário para streaming/download
-            video_url = await client.get_download_url(message)
+            # CORREÇÃO: Usa o método client.get_url() para gerar o link de streaming
+            video_url = await client.get_url(message)
             
             print(f"Vídeo encontrado: '{display_title}'. URL temporária gerada.")
             
