@@ -1,19 +1,15 @@
 # .github/workflows/update_site.yml
 name: Atualizar Links do Telegram
 
-# Define o gatilho: 
-# 1. 'workflow_dispatch': Permite executar manualmente
-# 2. 'schedule': Executa a cada hora (explicado abaixo)
+# Define o gatilho: Executa a cada hora
 on:
   workflow_dispatch:
   schedule:
-    # A sintaxe 'cron' define a frequência. 
-    # Neste caso, executa 'às 00 minutos de cada hora' (a cada hora).
     - cron: '0 * * * *' 
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Usa uma máquina virtual Linux
+    runs-on: ubuntu-latest 
     steps:
     
       # Passo 1: Checkout do Código
@@ -31,25 +27,29 @@ jobs:
         run: pip install -r requirements.txt
         
       # Passo 4: Criação do Ficheiro de Configuração SECRETO
-      # ESTE É O PASSO CRÍTICO. 
-      # Usamos Variáveis Secretas (Secrets) para criar o config.py em tempo de execução.
-      - name: Criar config.py com Secrets
+      # O BOT_TOKEN, GRUPO_USERNAME e API_HASH precisam de aspas no Python (YAML usa '${{ secrets.... }}')
+      - name: Criar config.py com Secrets (Bot Token)
         run: |
-          echo "API_ID = ${{ secrets.API_ID }}" > config.py
-          echo "API_HASH = '${{ secrets.API_HASH }}'" >> config.py
+          # 1. API_ID (Número)
+          echo "API_ID = 9999999" > config.py           
+          # 2. API_HASH (Placeholder, com aspas)
+          echo "API_HASH = 'PLACEHOLDER'" >> config.py
+          # 3. GRUPO_USERNAME (Com aspas, via Secret)
           echo "GRUPO_USERNAME = '${{ secrets.GRUPO_USERNAME }}'" >> config.py
+          # 4. HTML_FILE (Com aspas)
           echo "HTML_FILE = 'index.html'" >> config.py
+          # 5. BOT_TOKEN (Com aspas, via Secret - CORREÇÃO CRÍTICA)
+          echo "BOT_TOKEN = '${{ secrets.BOT_TOKEN }}'" >> config.py 
           
       # Passo 5: Execução do Script
       - name: Executar bot_videos.py
         run: python bot_videos.py
         
       # Passo 6: Envio do Novo HTML (O Site Atualizado)
-      # Este passo faz o commit e push do novo ficheiro 'index.html' para o seu repositório
       - name: Commit e Push do HTML Atualizado
         uses: EndBug/add-and-commit@v9
         with:
           author_name: 'GitHub Actions'
           author_email: 'action@github.com'
           message: 'Atualização automática do site via GitHub Actions'
-          add: 'index.html' # Adiciona apenas o ficheiro HTML
+          add: 'index.html'
