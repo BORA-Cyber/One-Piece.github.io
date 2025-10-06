@@ -3,8 +3,8 @@
 import os
 import asyncio
 from telethon import TelegramClient
-# NOVO: Adicionamos BOT_TOKEN, que será injetado pelo GitHub Actions
-from config import API_ID, API_HASH, GRUPO_USERNAME, HTML_FILE, BOT_TOKEN 
+# CORRIGIDO: Importa o módulo inteiro para evitar ImportError
+import config 
 from telethon.tl.types import MessageMediaDocument
 
 # --- Configurações ---
@@ -23,7 +23,7 @@ def generate_html(video_data):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Black Channel</title> 
+    <title>One Piece</title> 
     <style>
         body {{ font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }}
         h1 {{ 
@@ -113,7 +113,7 @@ def generate_html(video_data):
 """
     # Fim do HTML
     html_content += """
-    </div> <p style="text-align: center; margin-top: 40px; color: #777;">Site atualizado automaticamente pelo Bot.</p>
+    </div> <p style="text-align: center; margin-top: 40px; color: #777;">Site atualizado automaticamente pelo Boss B.</p>
 </body>
 </html>
 """
@@ -127,18 +127,18 @@ async def main():
 
     # Conexão com o Telegram
     # Usa API_ID e API_HASH (placeholders) e o Bot Token (real)
-    client = TelegramClient('bot_session', API_ID, API_HASH)
+    client = TelegramClient('bot_session', config.API_ID, config.API_HASH)
     
     # Inicia a conexão, usando o token do bot, que é não interativo!
-    await client.start(bot_token=BOT_TOKEN) 
+    await client.start(bot_token=config.BOT_TOKEN) 
     print("Conexão com o Bot Telegram iniciada.")
 
     # Tenta encontrar a entidade do grupo
     try:
         # ATENÇÃO: O bot PRECISA estar no grupo ou canal (como admin ou membro)
-        entity = await client.get_entity(GRUPO_USERNAME)
+        entity = await client.get_entity(config.GRUPO_USERNAME)
     except Exception as e:
-        print(f"Erro ao encontrar a entidade do grupo '{GRUPO_USERNAME}': {e}")
+        print(f"Erro ao encontrar a entidade do grupo '{config.GRUPO_USERNAME}': {e}")
         await client.disconnect()
         return
 
@@ -180,10 +180,10 @@ async def main():
     html_content = generate_html(videos_to_display)
 
     # Salva o arquivo HTML
-    with open(HTML_FILE, 'w', encoding='utf-8') as f:
+    with open(config.HTML_FILE, 'w', encoding='utf-8') as f:
         f.write(html_content)
 
-    print(f"Site atualizado! Arquivo '{HTML_FILE}' gerado com {len(videos_to_display)} vídeos.")
+    print(f"Site atualizado! Arquivo '{config.HTML_FILE}' gerado com {len(videos_to_display)} vídeos.")
 
     # Desconecta do Telegram
     await client.disconnect()
