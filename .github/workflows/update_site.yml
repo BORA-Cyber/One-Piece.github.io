@@ -44,4 +44,4 @@ jobs:
           author_name: 'GitHub Actions'
           author_email: 'action@github.com'
           message: 'Atualização automática do site via GitHub Actions'
-          add: 'index.html' # Ajustei para 'videos.html', conforme seu código Python
+          add: 'videos.html' # Ajustei para 'videos.html', conforme seu código Python
