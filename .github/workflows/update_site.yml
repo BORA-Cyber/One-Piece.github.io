@@ -27,15 +27,17 @@ jobs:
         # Você deve ter um 'requirements.txt' que lista a biblioteca 'telethon'
         run: pip install -r requirements.txt
         
-      # Passo 4: Execução do Script (NOVO PASSO COM OS SECRETS)
+      # Passo 4: Execução do Script (AGORA COM TODOS OS SECRETS)
       - name: Executar bot_videos.py
         run: python bot_videos.py
-        # ESTA SECÇÃO INJETA OS SECRETS. O PYTHON LÊ COM os.environ.get()
+        # ESTA SECÇÃO INJETA OS SECRETS
         env:
-          # Nomes dos Secrets no GitHub devem ser exatamente estes
+          # Variáveis de autenticação
           API_ID: ${{ secrets.API_ID }}
           API_HASH: ${{ secrets.API_HASH }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          # Variável para o nome do grupo/canal
+          GRUPO_USERNAME: ${{ secrets.GRUPO_USERNAME }}
           
       # Passo 5: Envio do Novo HTML (O Site Atualizado)
       - name: Commit e Push do HTML Atualizado
@@ -44,4 +46,4 @@ jobs:
           author_name: 'GitHub Actions'
           author_email: 'action@github.com'
           message: 'Atualização automática do site via GitHub Actions'
-          add: 'videos.html' # Ajustei para 'videos.html', conforme seu código Python
+          add: 'index.html' # CORRIGIDO: Agora faz commit do index.html
