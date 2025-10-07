@@ -5,25 +5,26 @@ import os
 from telethon.sync import TelegramClient
 
 # --- 1. CONFIGURAÇÃO (adaptada para GitHub Actions) ---
-# Leitura das variáveis de ambiente.
-API_ID_STR = os.environ.get('API_ID') # Lê como string primeiro
+# Leitura das variáveis de ambiente (API_ID, API_HASH, BOT_TOKEN)
+API_ID_STR = os.environ.get('API_ID') 
 API_HASH = os.environ.get('API_HASH')
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
-# Verifica se todas as variáveis existem
-if not all([API_ID_STR, API_HASH, BOT_TOKEN]):
-    raise ValueError("ERRO: Configure API_ID, API_HASH e BOT_TOKEN nos Secrets do GitHub.")
+# NOVO: Leitura da variável de ambiente para o nome do grupo
+# O nome 'GRUPO_USERNAME' deve corresponder ao nome que você injeta no seu YAML
+SOURCE_GROUP_ID = os.environ.get('GRUPO_USERNAME') 
+
+# Verifica se TODAS as variáveis necessárias existem
+if not all([API_ID_STR, API_HASH, BOT_TOKEN, SOURCE_GROUP_ID]):
+    raise ValueError("ERRO: Configure API_ID, API_HASH, BOT_TOKEN, e GRUPO_USERNAME nos Secrets do GitHub.")
 
 # Garante que API_ID é um número inteiro, essencial para o Telethon
 try:
     API_ID = int(API_ID_STR)
 except ValueError:
-    # Este erro será lançado se o valor em API_ID não for um número
     raise ValueError("ERRO: O valor de API_ID nos Secrets do GitHub deve ser um número inteiro.")
 
-# IMPORTANTE: Substitua pelo canal/grupo desejado
-SOURCE_GROUP_ID = '@exemplo_canal' 
-
+# Se chegou até aqui, todas as credenciais estão prontas.
 client = TelegramClient('bot_session', API_ID, API_HASH)
 
 def gerar_html(videos_data):
@@ -77,6 +78,7 @@ async def main():
     print("Conexão com o Bot Telegram iniciada.")
     
     # Adicionando um tratamento de erro para garantir que a entidade existe
+    # SOURCE_GROUP_ID agora usa o valor do Secret GRUPO_USERNAME
     try:
         entity = await client.get_entity(SOURCE_GROUP_ID)
     except Exception as e:
@@ -110,10 +112,11 @@ async def main():
     print("Gerando arquivo HTML...")
     html_final = gerar_html(videos_data)
     
-    with open('videos.html', 'w', encoding='utf-8') as f:
+    # ALTERADO: O ficheiro agora é 'index.html' para funcionar como página principal no GitHub Pages
+    with open('index.html', 'w', encoding='utf-8') as f: 
         f.write(html_final)
         
-    print("Arquivo 'videos.html' foi criado/atualizado com sucesso!")
+    print("Arquivo 'index.html' foi criado/atualizado com sucesso!")
 
     await client.disconnect()
 
