@@ -9,7 +9,12 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  
+    runs-on: ubuntu-latest
+    
+    # PERMISSÃO CRÍTICA: Concede permissão de escrita ao GITHUB_TOKEN
+    permissions:
+      contents: write 
+      
     steps:
       
       # Passo 1: Checkout do Código
@@ -24,19 +29,15 @@ jobs:
           
       # Passo 3: Instalação de Dependências
       - name: Instalar Telethon
-        # Você deve ter um 'requirements.txt' que lista a biblioteca 'telethon'
         run: pip install -r requirements.txt
         
-      # Passo 4: Execução do Script (AGORA COM TODOS OS SECRETS)
+      # Passo 4: Execução do Script (COM TODOS OS SECRETS)
       - name: Executar bot_videos.py
         run: python bot_videos.py
-        # ESTA SECÇÃO INJETA OS SECRETS
         env:
-          # Variáveis de autenticação
           API_ID: ${{ secrets.API_ID }}
           API_HASH: ${{ secrets.API_HASH }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          # Variável para o nome do grupo/canal
           GRUPO_USERNAME: ${{ secrets.GRUPO_USERNAME }}
           
       # Passo 5: Envio do Novo HTML (O Site Atualizado)
@@ -46,4 +47,4 @@ jobs:
           author_name: 'GitHub Actions'
           author_email: 'action@github.com'
           message: 'Atualização automática do site via GitHub Actions'
-          add: 'index.html' # CORRIGIDO: Agora faz commit do index.html
+          add: 'index.html'
