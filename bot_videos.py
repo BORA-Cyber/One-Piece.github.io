@@ -5,13 +5,21 @@ import os
 from telethon.sync import TelegramClient
 
 # --- 1. CONFIGURAÇÃO (adaptada para GitHub Actions) ---
-API_ID = os.environ.get('API_ID')
+# Leitura das variáveis de ambiente.
+API_ID_STR = os.environ.get('API_ID') # Lê como string primeiro
 API_HASH = os.environ.get('API_HASH')
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
-if not all([API_ID, API_HASH, BOT_TOKEN]):
+# Verifica se todas as variáveis existem
+if not all([API_ID_STR, API_HASH, BOT_TOKEN]):
     raise ValueError("ERRO: Configure API_ID, API_HASH e BOT_TOKEN nos Secrets do GitHub.")
-API_ID = int(API_ID)
+
+# Garante que API_ID é um número inteiro, essencial para o Telethon
+try:
+    API_ID = int(API_ID_STR)
+except ValueError:
+    # Este erro será lançado se o valor em API_ID não for um número
+    raise ValueError("ERRO: O valor de API_ID nos Secrets do GitHub deve ser um número inteiro.")
 
 # IMPORTANTE: Substitua pelo canal/grupo desejado
 SOURCE_GROUP_ID = '@exemplo_canal' 
@@ -68,21 +76,31 @@ async def main():
     await client.start(bot_token=BOT_TOKEN)
     print("Conexão com o Bot Telegram iniciada.")
     
-    entity = await client.get_entity(SOURCE_GROUP_ID)
+    # Adicionando um tratamento de erro para garantir que a entidade existe
+    try:
+        entity = await client.get_entity(SOURCE_GROUP_ID)
+    except Exception as e:
+        print(f"ERRO: Não foi possível obter a entidade para '{SOURCE_GROUP_ID}'. Verifique o nome do canal/grupo.")
+        print(f"Detalhes do erro: {e}")
+        await client.disconnect()
+        return
+
     videos_data = []
     limit_msgs = 10000 
     
     print(f"Buscando {limit_msgs} mensagens em '{getattr(entity, 'title', SOURCE_GROUP_ID)}'...")
     
     async for message in client.iter_messages(entity, limit=limit_msgs):
+        # Filtra por vídeo e duração máxima de 600 segundos (10 minutos)
         if message.video and message.video.duration < 600:
             
-            # --- AQUI ESTÁ A CORREÇÃO ---
             video_url = ""
             if hasattr(message.chat, 'username') and message.chat.username:
+                # Gera o link direto para a mensagem
                 video_url = f"https://t.me/{message.chat.username}/{message.id}"
             else:
-                continue # Pula esta mensagem se o chat for privado
+                # Pula a mensagem se o chat não tiver username (privado)
+                continue 
 
             caption = message.text or "Vídeo sem legenda"
             videos_data.append({"video_url": video_url, "caption": caption})
