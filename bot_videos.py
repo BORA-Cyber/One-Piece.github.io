@@ -4,21 +4,18 @@ import asyncio
 import os
 from telethon.sync import TelegramClient
 
-# --- 1. CONFIGURAÇÃO (adaptada para GitHub Actions) ---
-# Leitura das variáveis de ambiente (API_ID, API_HASH, BOT_TOKEN)
+# --- 1. CONFIGURAÇÃO (Variáveis de Ambiente) ---
+# Lendo credenciais e o nome do grupo a partir das variáveis de ambiente
 API_ID_STR = os.environ.get('API_ID') 
 API_HASH = os.environ.get('API_HASH')
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
-
-# NOVO: Leitura da variável de ambiente para o nome do grupo
-# O nome 'GRUPO_USERNAME' deve corresponder ao nome que você injeta no seu YAML
 SOURCE_GROUP_ID = os.environ.get('GRUPO_USERNAME') 
 
 # Verifica se TODAS as variáveis necessárias existem
 if not all([API_ID_STR, API_HASH, BOT_TOKEN, SOURCE_GROUP_ID]):
     raise ValueError("ERRO: Configure API_ID, API_HASH, BOT_TOKEN, e GRUPO_USERNAME nos Secrets do GitHub.")
 
-# Garante que API_ID é um número inteiro, essencial para o Telethon
+# Garante que API_ID é um número inteiro
 try:
     API_ID = int(API_ID_STR)
 except ValueError:
@@ -78,7 +75,6 @@ async def main():
     print("Conexão com o Bot Telegram iniciada.")
     
     # Adicionando um tratamento de erro para garantir que a entidade existe
-    # SOURCE_GROUP_ID agora usa o valor do Secret GRUPO_USERNAME
     try:
         entity = await client.get_entity(SOURCE_GROUP_ID)
     except Exception as e:
@@ -93,26 +89,30 @@ async def main():
     print(f"Buscando {limit_msgs} mensagens em '{getattr(entity, 'title', SOURCE_GROUP_ID)}'...")
     
     async for message in client.iter_messages(entity, limit=limit_msgs):
-        # Filtra por vídeo e duração máxima de 600 segundos (10 minutos)
-        if message.video and message.video.duration < 600:
+        
+        # CORREÇÃO DO ERRO: Verifica se o objeto 'video' existe E se tem o atributo 'duration'
+        if message.video and hasattr(message.video, 'duration'):
             
-            video_url = ""
-            if hasattr(message.chat, 'username') and message.chat.username:
-                # Gera o link direto para a mensagem
-                video_url = f"https://t.me/{message.chat.username}/{message.id}"
-            else:
-                # Pula a mensagem se o chat não tiver username (privado)
-                continue 
+            # Filtra por duração máxima de 600 segundos (10 minutos)
+            if message.video.duration < 600:
+                
+                video_url = ""
+                if hasattr(message.chat, 'username') and message.chat.username:
+                    # Gera o link direto para a mensagem
+                    video_url = f"https://t.me/{message.chat.username}/{message.id}"
+                else:
+                    # Pula a mensagem se o chat não tiver username (privado)
+                    continue 
 
-            caption = message.text or "Vídeo sem legenda"
-            videos_data.append({"video_url": video_url, "caption": caption})
+                caption = message.text or "Vídeo sem legenda"
+                videos_data.append({"video_url": video_url, "caption": caption})
 
     print(f"Total de {len(videos_data)} vídeos encontrados.")
     
     print("Gerando arquivo HTML...")
     html_final = gerar_html(videos_data)
     
-    # ALTERADO: O ficheiro agora é 'index.html' para funcionar como página principal no GitHub Pages
+    # O ficheiro agora é 'index.html' para funcionar como página principal no GitHub Pages
     with open('index.html', 'w', encoding='utf-8') as f: 
         f.write(html_final)
         
