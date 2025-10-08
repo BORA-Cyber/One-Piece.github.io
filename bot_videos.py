@@ -63,7 +63,7 @@ def gerar_html(videos_data):
             """
     
     html_content += """
-        <footer>site atualizado pelo Boss B.</footer>
+        <footer>Boss B</footer>
         </div>
     </body>
     </html>
@@ -95,8 +95,8 @@ async def main():
             
             video_duration = message.video.duration
             
-            # NOVO FILTRO DE DURAÇÃO: Apenas vídeos com 30 minutos (1800 segundos) ou mais.
-            if video_duration >= 1800:
+            # NOVO FILTRO DE DURAÇÃO: Mínimo 10 minutos (600s) E Máximo 2 horas (7200s)
+            if video_duration >= 600 and video_duration <= 7200:
                 
                 video_url = ""
                 if hasattr(message.chat, 'username') and message.chat.username:
