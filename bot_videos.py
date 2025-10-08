@@ -47,7 +47,7 @@ def gerar_html(videos_data):
     </head>
     <body>
         <div class="container">
-            <h1>🎬 one piece</h1>
+            <h1>🏴‍☠ One Piece</h1>
     """
 
     if not videos_data:
@@ -90,11 +90,13 @@ async def main():
     
     async for message in client.iter_messages(entity, limit=limit_msgs):
         
-        # CORREÇÃO DO ERRO: Verifica se o objeto 'video' existe E se tem o atributo 'duration'
+        # Filtro de Vídeo: Verifica se o objeto 'video' existe E se tem o atributo 'duration'
         if message.video and hasattr(message.video, 'duration'):
             
-            # Filtra por duração máxima de 2400 segundos (40 minutos)
-            if message.video.duration < 2400:
+            video_duration = message.video.duration
+            
+            # NOVO FILTRO DE DURAÇÃO: Apenas vídeos com 30 minutos (1800 segundos) ou mais.
+            if video_duration >= 1800:
                 
                 video_url = ""
                 if hasattr(message.chat, 'username') and message.chat.username:
@@ -112,7 +114,7 @@ async def main():
     print("Gerando arquivo HTML...")
     html_final = gerar_html(videos_data)
     
-    # O ficheiro agora é 'index.html' para funcionar como página principal no GitHub Pages
+    # O ficheiro é 'index.html'
     with open('index.html', 'w', encoding='utf-8') as f: 
         f.write(html_final)
         
@@ -123,4 +125,3 @@ async def main():
 if __name__ == "__main__":
     with client:
         client.loop.run_until_complete(main())
-
