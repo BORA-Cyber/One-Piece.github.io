@@ -47,7 +47,7 @@ def gerar_html(videos_data):
     </head>
     <body>
         <div class="container">
-            <h1>🎬 Lista de Vídeos</h1>
+            <h1>🎬 one piece</h1>
     """
 
     if not videos_data:
@@ -63,7 +63,7 @@ def gerar_html(videos_data):
             """
     
     html_content += """
-        <footer>Página gerada automaticamente.</footer>
+        <footer>site atualizado pelo Boss B.</footer>
         </div>
     </body>
     </html>
@@ -93,8 +93,8 @@ async def main():
         # CORREÇÃO DO ERRO: Verifica se o objeto 'video' existe E se tem o atributo 'duration'
         if message.video and hasattr(message.video, 'duration'):
             
-            # Filtra por duração máxima de 600 segundos (10 minutos)
-            if message.video.duration < 600:
+            # Filtra por duração máxima de 2400 segundos (40 minutos)
+            if message.video.duration < 2400:
                 
                 video_url = ""
                 if hasattr(message.chat, 'username') and message.chat.username:
@@ -123,3 +123,4 @@ async def main():
 if __name__ == "__main__":
     with client:
         client.loop.run_until_complete(main())
+
