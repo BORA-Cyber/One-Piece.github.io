@@ -1,0 +1,65 @@
+name: Gerar Lista de Vídeos Telegram
+
+# Configura o workflow para ser executado:
+# 1. Manualmente através do botão 'Run workflow'
+# 2. Automaticamente, a cada 6 horas
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *' # Executa às 00:00, 06:00, 12:00 e 18:00 UTC
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Obter o código
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Configurar o ambiente Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # 3. Instalar as dependências (telethon, Pillow, etc.)
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 4. RESTAURAR A SESSÃO (Chave de Login)
+      # Junta as três partes do Secret para recriar o ficheiro de sessão
+      - name: Restore Telegram Session from Secrets
+        env:
+          P1: ${{ secrets.TELEGRAM_SESSION_PART1 }}
+          P2: ${{ secrets.TELEGRAM_SESSION_PART2 }}
+          P3: ${{ secrets.TELEGRAM_SESSION_PART3 }}
+        run: |
+          # Concatena as três partes do Base64
+          FULL_SESSION_BASE64="${{ env.P1 }}${{ env.P2 }}${{ env.P3 }}"
+          
+          # Descodifica a string completa e recria o ficheiro my_account.session
+          echo $FULL_SESSION_BASE64 | base64 -d > my_account.session 
+
+      # 5. Executar o script Python
+      - name: Run Telegram Script
+        env:
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
+          GRUPO_USERNAME: ${{ secrets.GRUPO_USERNAME }}
+        run: python main.py
+
+      # 6. Configurar o GitHub Pages para publicação
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # 7. Upload do ficheiro HTML gerado como um artefato
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './index.html' # Envia o ficheiro HTML gerado
+
+      # 8. Publicar no GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
