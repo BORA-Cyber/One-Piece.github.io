@@ -8,6 +8,12 @@ on:
   schedule:
     - cron: '0 */6 * * *' # Executa às 00:00, 06:00, 12:00 e 18:00 UTC
 
+# 🔑 ATUALIZAÇÃO: PERMISSÕES NECESSÁRIAS PARA O GITHUB PAGES
+permissions:
+  contents: read # Necessário para fazer o checkout do código
+  pages: write   # Necessário para escrever/publicar no GitHub Pages
+  id-token: write # Necessário para autenticação OIDC do GitHub
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -23,7 +29,7 @@ jobs:
         with:
           python-version: '3.x'
 
-      # 3. Instalar as dependências (telethon, Pillow, etc.)
+      # 3. Instalar as dependências
       - name: Install dependencies
         run: pip install -r requirements.txt
 
@@ -57,7 +63,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './index.html' # Envia o ficheiro HTML gerado
+          path: './public' # Aponta para a pasta onde o main.py salva o index.html
 
       # 8. Publicar no GitHub Pages
       - name: Deploy to GitHub Pages
