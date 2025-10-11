@@ -18,7 +18,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
-    # 🔑 CORREÇÃO CRUCIAL: Adicionar o ambiente 'github-pages'
+    # CORREÇÃO CRUCIAL: Adicionar o ambiente 'github-pages' para o deploy
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -39,6 +39,7 @@ jobs:
         run: pip install -r requirements.txt
 
       # 4. RESTAURAR A SESSÃO (Chave de Login)
+      # Junta as três partes do Secret para recriar o ficheiro de sessão
       - name: Restore Telegram Session from Secrets
         env:
           P1: ${{ secrets.TELEGRAM_SESSION_PART1 }}
@@ -67,7 +68,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './public' # Aponta para a pasta onde o main.py salva o index.html
+          path: './public' # Publica a pasta 'public', que se torna a raiz do seu site
 
       # 8. Publicar no GitHub Pages (Deploy)
       - name: Deploy to GitHub Pages
