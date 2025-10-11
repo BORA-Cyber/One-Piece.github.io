@@ -27,7 +27,7 @@ client = TelegramClient(
     'my_account', 
     API_ID, 
     API_HASH, 
-    # Configurações de estabilidade para evitar falhas no download de media no GitHub Actions
+    # Configurações de estabilidade
     connection_retries=10,  
     retry_delay=5,          
     timeout=30              
@@ -35,7 +35,8 @@ client = TelegramClient(
 
 def gerar_html(videos_data):
     """
-    Função para gerar o conteúdo de um arquivo HTML em formato de grelha.
+    Função para gerar o conteúdo de um arquivo HTML usando IFRAMES de incorporação do Telegram.
+    NOTA: O embed só funcionará se o GRUPO_USERNAME for um canal público.
     """
     html_content = """
     <!DOCTYPE html>
@@ -52,15 +53,18 @@ def gerar_html(videos_data):
             /* --- ESTILO DE GRELHA (GRID) --- */
             .grid-container {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Aumentei o minmax para acomodar o player */
                 gap: 20px;
             }
             .video-card {
                 background-color: #fff;
                 border-radius: 8px;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                overflow: hidden; /* Garante que a miniatura não vaze */
+                overflow: hidden; 
                 transition: transform 0.2s;
+                /* Assegura que o cartão é flexível em altura */
+                display: flex; 
+                flex-direction: column;
             }
             .video-card:hover {
                 transform: translateY(-5px);
@@ -68,20 +72,7 @@ def gerar_html(videos_data):
             }
             .video-content {
                 padding: 15px;
-            }
-            .video-card a {
-                text-decoration: none;
-                font-weight: bold;
-                color: #1877f2;
-                font-size: 1.1em;
-                display: block; /* Ocupa toda a área para ser clicável */
-            }
-            .video-card img {
-                width: 100%;
-                height: auto;
-                display: block;
-                object-fit: cover; /* Assegura que a imagem preenche o espaço */
-                border-bottom: 1px solid #eee;
+                flex-grow: 1; /* Permite que a legenda ocupe o espaço restante */
             }
             .video-card p { 
                 margin-top: 8px; 
@@ -89,9 +80,26 @@ def gerar_html(videos_data):
                 white-space: pre-wrap; 
                 word-wrap: break-word; 
                 font-size: 0.9em;
-                max-height: 4.5em; /* Limita a legenda a cerca de 3 linhas */
-                overflow: hidden;
             }
+
+            /* --- ESTILO DO IFRAME DE EMBED (Proporção 16:9) --- */
+            .video-embed-container {
+                position: relative;
+                width: 100%;
+                /* Proporção 16:9 - Altura é 56.25% da largura */
+                padding-top: 56.25%; 
+                overflow: hidden;
+                background-color: #000;
+            }
+            .video-embed-container iframe {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: none;
+            }
+
             footer { text-align: center; margin-top: 30px; font-size: 0.8em; color: #90949c; }
         </style>
     </head>
@@ -107,16 +115,34 @@ def gerar_html(videos_data):
         for video in videos_data:
             caption_safe = video['caption'].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
             
-            # Formato do link de miniatura:
-            thumbnail_tag = f'<img src="data:image/jpeg;base64,{video["thumbnail_b64"]}" alt="Miniatura do Vídeo">' if video['thumbnail_b64'] else ''
+            # --- 1. EXTRAÇÃO DE DADOS PARA EMBED ---
+            # O URL é f"https://t.me/{link_prefix}/{message.id}"
+            url_parts = video['video_url'].split('/')
+            
+            # O identificador do canal (username) é o penúltimo item.
+            channel_identifier = url_parts[-2] 
+            message_id = url_parts[-1]
+            
+            # 2. GERAÇÃO DO IFRAME DE EMBED (Funciona apenas para canais públicos)
+            # Formato de embed para o web view: https://t.me/s/USERNAME/MESSAGE_ID?embed=1
+            embed_url = f"https://t.me/s/{channel_identifier}/{message_id}?embed=1"
+            
+            iframe_tag = f"""
+            <div class="video-embed-container">
+                <iframe 
+                    src="{embed_url}" 
+                    frameborder="0" 
+                    scrolling="no" 
+                    allowfullscreen
+                    style="width: 100%; height: 100%;">
+                </iframe>
+            </div>
+            """
             
             html_content += f"""
             <div class="video-card">
-                <a href="{video['video_url']}" target="_blank" rel="noopener noreferrer">
-                    {thumbnail_tag}
-                </a>
+                {iframe_tag}
                 <div class="video-content">
-                    <a href="{video['video_url']}" target="_blank" rel="noopener noreferrer">Assistir Vídeo</a>
                     <p>{caption_safe}</p>
                 </div>
             </div>
@@ -153,7 +179,7 @@ async def main():
     else:
         chat_id_clean = str(entity.id).replace('-100', '')
         link_prefix = f"c/{chat_id_clean}"
-        print(f"Grupo identificado como PRIVADO (Link via ID): {link_prefix}")
+        print(f"Grupo identificado como PRIVADO (Link via ID): {link_prefix}. O EMBED PODE FALHAR.")
         
     
     print(f"Buscando {limit_msgs} mensagens em '{getattr(entity, 'title', SOURCE_GROUP_ID)}'...")
@@ -173,16 +199,15 @@ async def main():
         # O filtro só verifica se a mensagem TEM um objeto 'video'
         if message.video:
             
-            # --- OBTENÇÃO DA MINIATURA ---
+            # A lógica de thumbnail não é usada no HTML de embed, mas mantemos o download 
+            # de qualquer forma (pode ser útil para debug ou para reverter).
             thumbnail_b64 = ""
             if message.video.thumbs:
                 best_thumb = message.video.thumbs[-1] 
                 try:
-                    # Tenta baixar com o timeout estendido
                     thumb_bytes = await client.download_media(best_thumb, file=bytes)
                     thumbnail_b64 = base64.b64encode(thumb_bytes).decode('utf-8')
                 except Exception as e:
-                    # Se falhar, a miniatura fica vazia (thumbnail_b64 = "")
                     pass 
             
             # 4. GERAÇÃO DO LINK
@@ -202,9 +227,9 @@ async def main():
     
     # 5. CRIAÇÃO DA PASTA E SALVAMENTO DO FICHEIRO PARA O GITHUB PAGES
     output_dir = 'public'
-    os.makedirs(output_dir, exist_ok=True) # Cria a pasta 'public'
+    os.makedirs(output_dir, exist_ok=True) 
     
-    output_path = os.path.join(output_dir, 'index.html') # Caminho: public/index.html
+    output_path = os.path.join(output_dir, 'index.html') 
     
     with open(output_path, 'w', encoding='utf-8') as f: 
         f.write(html_final)
