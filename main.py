@@ -183,7 +183,6 @@ async def main():
                     thumbnail_b64 = base64.b64encode(thumb_bytes).decode('utf-8')
                 except Exception as e:
                     # Se falhar, a miniatura fica vazia (thumbnail_b64 = "")
-                    # print(f"Aviso: Falha ao baixar miniatura: {e}") 
                     pass 
             
             # 4. GERAÇÃO DO LINK
@@ -201,10 +200,16 @@ async def main():
     print("Gerando arquivo HTML...")
     html_final = gerar_html(videos_data)
     
-    with open('index.html', 'w', encoding='utf-8') as f: 
+    # 5. CRIAÇÃO DA PASTA E SALVAMENTO DO FICHEIRO PARA O GITHUB PAGES
+    output_dir = 'public'
+    os.makedirs(output_dir, exist_ok=True) # Cria a pasta 'public'
+    
+    output_path = os.path.join(output_dir, 'index.html') # Caminho: public/index.html
+    
+    with open(output_path, 'w', encoding='utf-8') as f: 
         f.write(html_final)
         
-    print("Arquivo 'index.html' foi criado/atualizado com sucesso!")
+    print(f"Arquivo '{output_path}' foi criado/atualizado com sucesso!")
 
     await client.disconnect()
     print("Sessão terminada.")
