@@ -35,8 +35,8 @@ client = TelegramClient(
 
 def gerar_html(videos_data):
     """
-    Função para gerar o conteúdo de um arquivo HTML usando IFRAMES de incorporação do Telegram.
-    NOTA: O embed só funcionará se o GRUPO_USERNAME for um canal público.
+    Função para gerar o conteúdo de um arquivo HTML usando MINIATURAS CLICÁVEIS 
+    que apontam para o link direto do Telegram.
     """
     html_content = """
     <!DOCTYPE html>
@@ -53,7 +53,7 @@ def gerar_html(videos_data):
             /* --- ESTILO DE GRELHA (GRID) --- */
             .grid-container {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Aumentei o minmax para acomodar o player */
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
                 gap: 20px;
             }
             .video-card {
@@ -62,7 +62,6 @@ def gerar_html(videos_data):
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 overflow: hidden; 
                 transition: transform 0.2s;
-                /* Assegura que o cartão é flexível em altura */
                 display: flex; 
                 flex-direction: column;
             }
@@ -70,9 +69,32 @@ def gerar_html(videos_data):
                 transform: translateY(-5px);
                 box-shadow: 0 4px 8px rgba(0,0,0,0.15);
             }
+
+            /* --- ESTILO DA MINIATURA --- */
+            .thumbnail-link {
+                display: block;
+                position: relative;
+                width: 100%;
+                /* Proporção 16:9 */
+                padding-top: 56.25%; 
+                overflow: hidden;
+            }
+            .thumbnail-link img {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transition: opacity 0.3s;
+            }
+            .thumbnail-link:hover img {
+                opacity: 0.8;
+            }
+
             .video-content {
                 padding: 15px;
-                flex-grow: 1; /* Permite que a legenda ocupe o espaço restante */
+                flex-grow: 1; 
             }
             .video-card p { 
                 margin-top: 8px; 
@@ -81,25 +103,6 @@ def gerar_html(videos_data):
                 word-wrap: break-word; 
                 font-size: 0.9em;
             }
-
-            /* --- ESTILO DO IFRAME DE EMBED (Proporção 16:9) --- */
-            .video-embed-container {
-                position: relative;
-                width: 100%;
-                /* Proporção 16:9 - Altura é 56.25% da largura */
-                padding-top: 56.25%; 
-                overflow: hidden;
-                background-color: #000;
-            }
-            .video-embed-container iframe {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                border: none;
-            }
-
             footer { text-align: center; margin-top: 30px; font-size: 0.8em; color: #90949c; }
         </style>
     </head>
@@ -115,33 +118,20 @@ def gerar_html(videos_data):
         for video in videos_data:
             caption_safe = video['caption'].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
             
-            # --- 1. EXTRAÇÃO DE DADOS PARA EMBED ---
-            # O URL é f"https://t.me/{link_prefix}/{message.id}"
-            url_parts = video['video_url'].split('/')
+            # Miniatura em Base64
+            # A imagem é inserida diretamente no código HTML (sem links externos)
+            thumbnail_tag = f'<img src="data:image/jpeg;base64,{video["thumbnail_b64"]}" alt="Pré-visualização do Vídeo">' if video["thumbnail_b64"] else ""
             
-            # O identificador do canal (username) é o penúltimo item.
-            channel_identifier = url_parts[-2] 
-            message_id = url_parts[-1]
-            
-            # 2. GERAÇÃO DO IFRAME DE EMBED (Funciona apenas para canais públicos)
-            # Formato de embed para o web view: https://t.me/s/USERNAME/MESSAGE_ID?embed=1
-            embed_url = f"https://t.me/s/{channel_identifier}/{message_id}?embed=1"
-            
-            iframe_tag = f"""
-            <div class="video-embed-container">
-                <iframe 
-                    src="{embed_url}" 
-                    frameborder="0" 
-                    scrolling="no" 
-                    allowfullscreen
-                    style="width: 100%; height: 100%;">
-                </iframe>
-            </div>
+            # Geração do link clicável que redireciona para o Telegram
+            link_tag = f"""
+            <a href="{video["video_url"]}" target="_blank" class="thumbnail-link">
+                {thumbnail_tag}
+            </a>
             """
             
             html_content += f"""
             <div class="video-card">
-                {iframe_tag}
+                {link_tag}
                 <div class="video-content">
                     <p>{caption_safe}</p>
                 </div>
@@ -165,42 +155,37 @@ async def main():
         entity = await client.get_entity(SOURCE_GROUP_ID)
     except Exception as e:
         print(f"ERRO: Não foi possível obter a entidade para '{SOURCE_GROUP_ID}'. Verifica o nome do canal/grupo.")
-        print(f"Detalhes do erro: {e}")
         await client.disconnect()
         return
 
     videos_data = []
     limit_msgs = 10000 
     
-    # Define o prefixo do link (username ou ID limpo para canais privados)
+    # Define o prefixo do link (username para canais públicos ou ID para privados)
     if entity.username:
         link_prefix = entity.username
         print(f"Grupo identificado como PÚBLICO: @{link_prefix}")
     else:
         chat_id_clean = str(entity.id).replace('-100', '')
         link_prefix = f"c/{chat_id_clean}"
-        print(f"Grupo identificado como PRIVADO (Link via ID): {link_prefix}. O EMBED PODE FALHAR.")
+        print(f"Grupo identificado como PRIVADO (Link via ID): {link_prefix}.")
         
     
     print(f"Buscando {limit_msgs} mensagens em '{getattr(entity, 'title', SOURCE_GROUP_ID)}'...")
     
-    # 1. Coletar todas as mensagens
     all_messages = []
     async for message in client.iter_messages(entity, limit=limit_msgs):
         all_messages.append(message)
 
-    # 2. Inverter a lista para ordenar do Antigo (primeiro) para o Recente (último)
+    # Ordenar do Antigo (primeiro) para o Recente (último)
     all_messages.reverse()
     print(f"Ordenação invertida: {len(all_messages)} mensagens para processar (Antigo -> Recente).")
     
-    # 3. Processar a lista invertida
     for message in all_messages:
         
-        # O filtro só verifica se a mensagem TEM um objeto 'video'
         if message.video:
             
-            # A lógica de thumbnail não é usada no HTML de embed, mas mantemos o download 
-            # de qualquer forma (pode ser útil para debug ou para reverter).
+            # 1. DOWNLOAD DA MINIATURA E CONVERSÃO PARA BASE64
             thumbnail_b64 = ""
             if message.video.thumbs:
                 best_thumb = message.video.thumbs[-1] 
@@ -208,9 +193,9 @@ async def main():
                     thumb_bytes = await client.download_media(best_thumb, file=bytes)
                     thumbnail_b64 = base64.b64encode(thumb_bytes).decode('utf-8')
                 except Exception as e:
-                    pass 
+                    print(f"Aviso: Não foi possível baixar a miniatura da mensagem {message.id}. {e}")
             
-            # 4. GERAÇÃO DO LINK
+            # 2. GERAÇÃO DO LINK DIRETO DO TELEGRAM
             video_url = f"https://t.me/{link_prefix}/{message.id}"
             
             caption = message.text or "Vídeo sem legenda"
@@ -225,7 +210,7 @@ async def main():
     print("Gerando arquivo HTML...")
     html_final = gerar_html(videos_data)
     
-    # 5. CRIAÇÃO DA PASTA E SALVAMENTO DO FICHEIRO PARA O GITHUB PAGES
+    # 3. SALVAMENTO NA PASTA 'public' PARA O GITHUB PAGES
     output_dir = 'public'
     os.makedirs(output_dir, exist_ok=True) 
     
